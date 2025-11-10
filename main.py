@@ -1,8 +1,11 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr
+from typing import Optional
+from database import create_document
 
-app = FastAPI()
+app = FastAPI(title="Cosmos Voyages API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -12,13 +15,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 def read_root():
-    return {"message": "Hello from FastAPI Backend!"}
+    return {"message": "Cosmos Voyages backend is live"}
+
 
 @app.get("/api/hello")
 def hello():
-    return {"message": "Hello from the backend API!"}
+    return {"message": "Welcome to Cosmos Voyages API"}
+
+
+# Waitlist schema for request validation
+class WaitlistRequest(BaseModel):
+    name: str
+    email: EmailStr
+    mission: Optional[str] = None
+    message: Optional[str] = None
+    consent: bool = True
+
+
+@app.post("/api/waitlist")
+async def join_waitlist(payload: WaitlistRequest):
+    try:
+        # Insert into MongoDB using the helper
+        doc_id = create_document("waitlist", payload)
+        return {"status": "ok", "id": doc_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/test")
 def test_database():
